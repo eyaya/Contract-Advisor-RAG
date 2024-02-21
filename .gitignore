@@ -1,4 +1,6 @@
 venv2
+data
+.env
 .DS_Store
 .huskyrc.json
 out
