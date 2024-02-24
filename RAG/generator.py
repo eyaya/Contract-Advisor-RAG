@@ -10,59 +10,65 @@ from langchain_openai import OpenAIEmbeddings
 #from langchain_community.chat_models import ChatOpenAI
 from langchain_openai import ChatOpenAI
 from langchain.vectorstores.chroma import Chroma
+import chromadb
+from langchain.chains.question_answering import load_qa_chain
+from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+from langchain.schema.runnable import RunnableLambda, RunnablePassthrough
+from operator import itemgetter
 import os
-from langchain_openai import OpenAI
+import openai
+from openai import OpenAI
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)
 import sys
-
-
+sys.path.append('../')
+from RAG.retriver import load_retriever
 
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-
+data_path = '../data/contract_data'
 CHROMA_PATH = '../data/chromadb/'
 
-client = OpenAI(
-    api_key=OPENAI_API_KEY
-)
+openai.api_key = os.environ['OPENAI_API_KEY']
 
-core_embeddings_model = OpenAIEmbeddings()
-def get_context(chroma_path):
-    # instantiate a retriever
-    vectorstore = Chroma(persist_directory=chroma_path,embedding_function=core_embeddings_model)
+openai_client = OpenAI()
+
+
+template = """You are a legal expert tasked with acting as the best lawyer and contract analyzer. Your task is to thoroughly understand the provided context and answer questions related to legal matters, contracts, and relevant laws. You must provide accurate responses based solely on the information provided in the context. If the necessary information is not present in the context, respond with "I don't know.".
+If the question can be answered as either yes or no, respond with either "Yes." or "No." first and include the explanation in your response.:
+
+### CONTEXT
+{context}
+
+### QUESTION
+Question: {question}
+"""
+
+prompt = ChatPromptTemplate.from_template(template)
+
+embedding_function = SentenceTransformerEmbeddingFunction()#OpenAIEmbeddings()
+def get_context(data_path,CHROMA_PATH):
+    context = create_vectorstore(data_path,CHROMA_PATH)
     
-    retriever = vectorstore.as_retriever()
-    #search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.85}
-    return retriever
+    return context
 
-def generate_answer(context):
 
-    system_template = """
-        Your task is to answer the question from the given context below. 
-        ----
-        ### CONTEXT:
-        {context}
-        \n
-        ### # QUESTION:
-        {question}
-        <bot>:
-        """
-        
-    user_template = "Question:```{question}```"
-    messages = [
-                SystemMessagePromptTemplate.from_template(system_template),
-                HumanMessagePromptTemplate.from_template(user_template)
-    ]
-    qa_prompt = ChatPromptTemplate.from_messages( messages )
-    
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo")
-    memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
-    conversation_chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=context,
-        chain_type='stuff',
-        memory=memory,
-        combine_docs_chain_kwargs={"prompt": qa_prompt}
-    )
-    return conversation_chain
+'''
+
+def create_qa_chain(retriever):
+  primary_qa_llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+  created_qa_chain = (
+    {"context": itemgetter("question") | retriever,
+     "question": itemgetter("question")
+    }
+    | RunnablePassthrough.assign(
+        context=itemgetter("context")
+      )
+    | {
+         "response": prompt | primary_qa_llm,
+         "context": itemgetter("context"),
+      }
+  )
+
+  return created_qa_chain
+'''
     
