@@ -51,12 +51,8 @@ def split_text_into_chunks(pages, chunk_size, chunk_overlap):
     for page in pages:
         page.page_content = remove_special_characters(page.page_content)
         page.page_content=re.sub(r'\s+', ' ',page.page_content )
-    print(pages[0])
-    print("\n\n",pages[1])
     text_splitter = RecursiveCharacterTextSplitter(separators=["\n\n","\n",".", " ",""],chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     documents = text_splitter.split_documents(pages)
-    print('\n\n',documents[0])
-    print('\n\n',documents[1])
     return documents
 
 def create_embeddings(api_key):
@@ -67,7 +63,7 @@ def setup_vector_database(vectordb_path,docs, embeddings):
     """Sets up a vector database for storing embeddings."""
     
     parent_splitter = RecursiveCharacterTextSplitter(separators=["\n\n","\n",".", " ",""],chunk_size=500,chunk_overlap=10)
-    child_splitter = RecursiveCharacterTextSplitter(separators=["\n\n","\n",".", " "],chunk_size=2000,chunk_overlap=20)
+    child_splitter = RecursiveCharacterTextSplitter(separators=["\n\n","\n",".", " "],chunk_size=800,chunk_overlap=20)
 
     vectorstore = Chroma(collection_name="contract", embedding_function=OpenAIEmbeddings())
 
@@ -78,6 +74,7 @@ def setup_vector_database(vectordb_path,docs, embeddings):
         docstore=store,
         child_splitter=child_splitter,
         parent_splitter=parent_splitter,
+        search_kwargs={"k": 5},
     )
     parent_document_retriever.add_documents(docs)
     return parent_document_retriever
