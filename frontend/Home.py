@@ -25,6 +25,8 @@ from RAG.retriver import (
     initialize_chat_model
     )
 
+from RAG.generator import create_retrieval_qa_chain
+
 from src.utils import remove_special_characters
 # Constants and API Keys
 #sOPENAI_API_KEY = "your_openai_api_key"  # Replace with your actual API key
