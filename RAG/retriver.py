@@ -9,8 +9,8 @@ from langchain_community.chat_models import ChatOpenAI
 from langchain.chains.conversation.memory import ConversationBufferWindowMemory
 from langchain.chains import ConversationalRetrievalChain
 #from langchain.retrievers import EnsembleRetriever
-#from langchain_community.retrievers import BM25Retriever
-from langchain.retrievers import BM25Retriever, EnsembleRetriever
+from langchain_community.retrievers import BM25Retriever
+from langchain.retrievers import EnsembleRetriever
 from langchain.retrievers import ParentDocumentRetriever
 from langchain.storage import InMemoryStore
 from langchain.prompts import ChatPromptTemplate
@@ -65,11 +65,11 @@ def create_embeddings(api_key):
 
 def setup_vector_database(vectordb_path,docs, embeddings):
     """Sets up a vector database for storing embeddings."""
-    '''
-    parent_splitter = RecursiveCharacterTextSplitter(chunk_size=500)
-    child_splitter = RecursiveCharacterTextSplitter(chunk_size=1000)
+    
+    parent_splitter = RecursiveCharacterTextSplitter(separators=["\n\n","\n",".", " ",""],chunk_size=500,chunk_overlap=10)
+    child_splitter = RecursiveCharacterTextSplitter(separators=["\n\n","\n",".", " "],chunk_size=2000,chunk_overlap=20)
 
-    vectorstore = Chroma(collection_name="split_parents", embedding_function=OpenAIEmbeddings())
+    vectorstore = Chroma(collection_name="contract", embedding_function=OpenAIEmbeddings())
 
     store = InMemoryStore()
 
@@ -80,13 +80,18 @@ def setup_vector_database(vectordb_path,docs, embeddings):
         parent_splitter=parent_splitter,
     )
     parent_document_retriever.add_documents(docs)
+    return parent_document_retriever
+    
     '''
     #text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=10)
     #b_docs = text_splitter.split_documents(docs)
     vectordb =  Chroma(persist_directory=vectordb_path,embedding_function=embeddings)
     return vectordb.as_retriever(search_type="similarity",search_kwargs={'k': 10})
     '''
-    bm25_retriever = BM25Retriever.from_documents(docs)
+    '''
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=10)
+    b_docs = text_splitter.split_documents(docs)
+    bm25_retriever = BM25Retriever.from_documents(b_docs)
 
     bm25_retriever.k = 2
 
@@ -97,8 +102,8 @@ def setup_vector_database(vectordb_path,docs, embeddings):
     ensemble_retriever = EnsembleRetriever(retrievers=[bm25_retriever, chroma_retriever], weights=[0.75, 0.25])
     return ensemble_retriever
     '''
-    return parent_document_retriever
-
+    
+    
 def initialize_chat_model(api_key, model_name):
     """Initializes the chat model with specified AI model."""
     return ChatOpenAI(openai_api_key=api_key, model_name=model_name, temperature=0.0)
