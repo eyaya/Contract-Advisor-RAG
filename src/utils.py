@@ -68,7 +68,7 @@ def create_QA(file_path):
 
 def remove_special_characters(input_string):
     # Define a regex pattern to match the special characters
-    pattern = r'[\t●\n\[\]]'
+    pattern = r'["\t●\n\[\]]'
     # Use re.sub() to replace matches of the pattern with an empty string
     cleaned_string = re.sub(pattern, ' ', input_string)
     return cleaned_string

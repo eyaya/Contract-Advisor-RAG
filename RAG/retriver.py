@@ -13,6 +13,12 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.retrievers import BM25Retriever, EnsembleRetriever
 from langchain.retrievers import ParentDocumentRetriever
 from langchain.storage import InMemoryStore
+from langchain.prompts import ChatPromptTemplate
+
+from langchain.prompts import ChatPromptTemplate,SystemMessagePromptTemplate,HumanMessagePromptTemplate
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from operator import itemgetter
 import os
 import sys
 import re
@@ -78,7 +84,7 @@ def setup_vector_database(vectordb_path,docs, embeddings):
     #text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=10)
     #b_docs = text_splitter.split_documents(docs)
     vectordb =  Chroma(persist_directory=vectordb_path,embedding_function=embeddings)
-    return vectordb.as_retriever()
+    return vectordb.as_retriever(search_type="similarity",search_kwargs={'k': 10})
     '''
     bm25_retriever = BM25Retriever.from_documents(docs)
 
@@ -96,12 +102,54 @@ def setup_vector_database(vectordb_path,docs, embeddings):
 def initialize_chat_model(api_key, model_name):
     """Initializes the chat model with specified AI model."""
     return ChatOpenAI(openai_api_key=api_key, model_name=model_name, temperature=0.0)
+def craft_propmt():
+    template = """You are a legal expert tasked with acting as the best lawyer and contract analyzer. Your task is to thoroughly understand the provided context and answer questions related to legal matters, contracts, and relevant laws. You are also cabable of computing and compairing currency values. 
+    You must provide accurate responses based solely on the information provided in the context. If the question can be answered as either yes or no, respond with either "Yes." or "No." first and include the explanation in your response.:
 
-def create_retrieval_qa_chain(chat_model, vector_database):
+    ### CONTEXT
+    {context}
+
+    ### QUESTION
+    Question: {question}
+    """
+
+    prompt = ChatPromptTemplate.from_template(template)
+    return prompt
+def create_retrieval_qa_chain(chat_model, retriver):
     """Creates a retrieval QA chain combining model and database."""
+
+    system_template = """You are the ultimate legal authority, charged with the responsibility of embodying the pinnacle of legal expertise as both a formidable lawyer and a meticulous contract analyst. Your mission is to delve deep into the provided context, comprehending it to its fullest extent, and adeptly address inquiries pertaining to legal intricacies, contracts, and pertinent legislation. Your prowess extends to the realm of financial computation, enabling you to accurately evaluate and compare currency values. 
+    Your responses must be unwaveringly precise, drawing solely from the information given in the context. When faced with queries admitting of a binary response, assertively reply with either "Yes." or "No." only. Please use the following context only:
+
+    ### CONTEXT
+    {context}
+
+    ### QUESTION
+    Question: {question}
+    """
+        
+    user_template = "Question:```{question}```"
+    messages = [
+                SystemMessagePromptTemplate.from_template(system_template),
+                HumanMessagePromptTemplate.from_template(user_template)
+    ]
+    qa_prompt = ChatPromptTemplate.from_messages( messages )
+    
+    llm = chat_model
+    memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=retriver,
+        chain_type='stuff',
+        memory=memory,
+        combine_docs_chain_kwargs={"prompt": qa_prompt}
+    )
+    return conversation_chain
+
+'''
     memory = ConversationBufferWindowMemory(memory_key='chat_history', return_messages=True)
     return ConversationalRetrievalChain.from_llm(chat_model, retriever=vector_database, memory=memory)
-
+'''
 def ask_question_and_get_answer(qa_chain, question):
     """Asks a question and retrieves the answer."""
     return qa_chain({"question": question})['answer']
