@@ -28,13 +28,13 @@ css = '''
  /* Chat containers */
 .container {
   #border: 1px solid #dedede;
-  #background-color: #efefef;
-    background: rgba(0, 0, 0, .3);
+  #background-color: #F6F5F5;
+  background: rgba(0, 0, 0, .3);
   border-radius: 15px;
   max-width: 450px;
   padding: 10px;
   margin: 10px 0;
-  color: rgba(255, 255, 255, .5);
+  color: #35374B;
   
 
 }

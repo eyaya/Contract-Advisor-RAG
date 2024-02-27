@@ -1,21 +1,14 @@
 import streamlit as st
 from htmlTemplates import css, bot_template,bot1_templete, user_template,bot2_template,user3_template
 from io import BytesIO
-
-from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores.chroma import Chroma
-#from langchain.chat_models import ChatOpenAI
-from langchain_community.chat_models import ChatOpenAI
-from langchain.chains.conversation.memory import ConversationBufferWindowMemory
-from langchain.chains import ConversationalRetrievalChain
 import os
+
 import sys
-import re
-
-
 sys.path.append('../')
+
+
+
+
 from RAG.retriver import (
     create_embeddings,
     load_and_split_document,
@@ -27,10 +20,22 @@ from RAG.retriver import (
 
 from RAG.generator import create_retrieval_qa_chain
 
-from src.utils import remove_special_characters
-# Constants and API Keys
-#sOPENAI_API_KEY = "your_openai_api_key"  # Replace with your actual API key
+
+import pandas as pd
+
+import os
+import chromadb
+import shutil
+import random
+import re
+from dotenv import load_dotenv
+load_dotenv()
+
+
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+
+import sys
+sys.path.append('../')
 GPT_MODEL_NAME = 'gpt-3.5-turbo'
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 10
@@ -42,6 +47,23 @@ CHUNK_OVERLAP = 10
 
 def main():
     st.set_page_config(page_title="Lizzy AI", page_icon=":books:")
+    page_bg_img = f"""<style>
+    [data-testid="stAppViewContainer"] > .main {{
+    background-image: url("https://i.postimg.cc/4xgNnkfX/Untitled-design.png");
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-attachment: local;
+    }}
+    [data-testid="stHeader"] {{
+    background: rgba(0,0,0,0);
+    }}
+    </style>
+    """
+
+    st.markdown(page_bg_img, unsafe_allow_html=True)
+
+    
     st.write(css, unsafe_allow_html=True)
 
     if "conversation" not in st.session_state:
