@@ -1,6 +1,5 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import Document
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.vectorstores.chroma import Chroma
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
@@ -87,8 +86,10 @@ class VectorDatabase:
             child_splitter=child_splitter,
             parent_splitter=parent_splitter,
             search_kwargs={"k": 10},
+            
         )
         parent_document_retriever.add_documents(docs)
+        
         return parent_document_retriever
 
 class ChatModel:

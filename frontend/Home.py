@@ -1,5 +1,5 @@
 import streamlit as st
-from htmlTemplates import css, bot_template, bot1_templete, user_template, bot2_template, user3_template
+from htmlTemplates import css,bot2_template, user3_template
 from io import BytesIO
 import os
 from dotenv import load_dotenv
@@ -10,15 +10,7 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 import sys
 sys.path.append('../')
 
-from RAG.retriever import DocumentProcessor, VectorDatabase, ChatModel, ChatPrompt, ConversationChain,EmbeddingsCreator
-
-
-import pandas as pd
-import os
-import chromadb
-import shutil
-import random
-import re
+from RAG.retriever import DocumentProcessor, VectorDatabase, ChatModel, ConversationChain,EmbeddingsCreator
 
 GPT_MODEL_NAME = 'gpt-3.5-turbo'
 CHUNK_SIZE = 600
