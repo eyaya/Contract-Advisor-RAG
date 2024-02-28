@@ -47,6 +47,23 @@ from ragas.metrics import (
 from ragas.metrics.critique import harmfulness
 from ragas import evaluate
 
+def create_qa_chain(retriever,prompt):
+  primary_qa_llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+  created_qa_chain = (
+    {"context": itemgetter("question") | retriever,
+     "question": itemgetter("question")
+    }
+    | RunnablePassthrough.assign(
+        context=itemgetter("context")
+      )
+    | {
+         "response": prompt | primary_qa_llm,
+         "context": itemgetter("context"),
+      }
+  )
+
+  return created_qa_chain
+
 def create_ragas_dataset(rag_pipeline, eval_dataset):
   rag_dataset = []
   for row in tqdm(eval_dataset):
@@ -76,5 +93,7 @@ def evaluate_ragas_dataset(ragas_dataset):
     ],
   )
   return result
+
+
 
 
