@@ -1,49 +1,29 @@
 import streamlit as st
-from htmlTemplates import css, bot_template,bot1_templete, user_template,bot2_template,user3_template
+from htmlTemplates import css, bot_template, bot1_templete, user_template, bot2_template, user3_template
 from io import BytesIO
 import os
-
-import sys
-sys.path.append('../')
-
-
-
-
-from RAG.retriver import (
-    create_embeddings,
-    load_and_split_document,
-    create_retrieval_qa_chain,
-    split_text_into_chunks,
-    setup_vector_database,
-    initialize_chat_model
-    )
-
-from RAG.generator import create_retrieval_qa_chain
-
-
-import pandas as pd
-
-import os
-import chromadb
-import shutil
-import random
-import re
 from dotenv import load_dotenv
 load_dotenv()
-
 
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 
 import sys
 sys.path.append('../')
+
+from RAG.retriever import DocumentProcessor, VectorDatabase, ChatModel, ChatPrompt, ConversationChain,EmbeddingsCreator
+
+
+import pandas as pd
+import os
+import chromadb
+import shutil
+import random
+import re
+
 GPT_MODEL_NAME = 'gpt-3.5-turbo'
-CHUNK_SIZE = 500
+CHUNK_SIZE = 600
 CHUNK_OVERLAP = 10
-
-# Function Definitions
-
-
-# Main Execution Flow
+#print(OPENAI_API_KEY)
 
 def main():
     st.set_page_config(page_title="Lizzy AI", page_icon=":books:")
@@ -77,18 +57,30 @@ def main():
     uploaded_file = st.sidebar.file_uploader("Upload contract", type=["pdf"])
     if uploaded_file is not None:
         with st.spinner('Loading and processing the document...'):
-            pages = load_and_split_document(uploaded_file)
-            documents = split_text_into_chunks(pages, CHUNK_SIZE, CHUNK_OVERLAP)
-            embeddings = create_embeddings(OPENAI_API_KEY)
-            vector_database = setup_vector_database('../data/chromadb',documents ,embeddings)
-            chat_model = initialize_chat_model(OPENAI_API_KEY, GPT_MODEL_NAME)
-            qa_chain = create_retrieval_qa_chain(chat_model, vector_database)
+            doc_processor = DocumentProcessor(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+            documents = doc_processor.load_and_split_document(uploaded_file)
+            #documents = doc_processor.split_text_into_chunks(pages)
+            
+            embeddings_creator = EmbeddingsCreator()
+            embeddings = embeddings_creator.create_embeddings(OPENAI_API_KEY)
+            
+            vectordb = VectorDatabase(vectordb_path='../data/chromadb')
+            vector_database = vectordb.setup_vector_database(documents, embeddings)
+            
+            chat_model = ChatModel()
+            chat_model = chat_model.initialize_chat_model(OPENAI_API_KEY, GPT_MODEL_NAME)
+            
+            
+            qa_chain = ConversationChain()
+            qa_chain = qa_chain.create_retrieval_qa_chain(chat_model, vector_database)
+            
             st.success("Document processed successfully!")
 
         def handle_userinput(user_question):
             result = qa_chain({"question": user_question, "chat_history": st.session_state['history']})
             st.session_state['history'].append((qa_chain, result["answer"]))
             return result["answer"]
+        
         # Initialize chat history
         if 'history' not in st.session_state:
             st.session_state['history'] = []
@@ -103,6 +95,7 @@ def main():
         # Create containers for chat history and user input
         response_container = st.container()
         container = st.container()
+        
         # User input form
         with container:
             with st.form(key='my_form', clear_on_submit=True):
@@ -119,12 +112,8 @@ def main():
         if st.session_state['generated']:
             with response_container:
                 for i in range(len(st.session_state['generated'])):
-                    
-                    st.write(user3_template.replace(
-                "{{MSG}}", st.session_state["past"][i]), unsafe_allow_html=True)
-                    
-                    st.write(bot2_template.replace(
-                "{{MSG}}", st.session_state["generated"][i]), unsafe_allow_html=True)
+                    st.write(user3_template.replace("{{MSG}}", st.session_state["past"][i]), unsafe_allow_html=True)
+                    st.write(bot2_template.replace("{{MSG}}", st.session_state["generated"][i]), unsafe_allow_html=True)
         
 if __name__ == '__main__':
     main()
