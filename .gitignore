@@ -1,5 +1,6 @@
 venv2
 data
+backend/data
 .env
 .DS_Store
 .huskyrc.json
